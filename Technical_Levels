@@ -117,3 +117,20 @@ pdf.output('test.TTF.pdf', 'F')
 #https://www.geeksforgeeks.org/get-current-date-using-python/?msclkid=f97f0e60cee111ecb380cdfe61066e96
 #https://stackoverflow.com/questions/51864730/python-what-is-the-process-to-create-pdf-reports-with-charts-from-a-db
 #https://saralgyaan.com/posts/python-candlestick-chart-matplotlib-tutorial-chapter-11/
+
+outlook = win32.Dispatch('outlook.application')
+mail = outlook.CreateItem(0)
+mail.Subject = 'Technical Support and Resistance Natural Gas'
+mail.To = "****"
+#mail.To = "****"
+#mail.To ="******"
+mail.HTMLBody = r"""
+Technical Support and Resistance Natural Gas ,<br><br>
+T90 Min Candlestick Chart of NG <br><br>
+<img src="X:\Trading\x-Market Fundamentals\E-Mail Attachments\x-Daily Files\Barchart.png"><br><br>
+Let us know if you wish to see any additional Analytics..<br><br>
+Sincerely,<br>
+Quentin Taillefer 
+"""
+#mail.Attachments.Add(os.getcwd() + "\\news.NG.csv")
+mail.Send()
