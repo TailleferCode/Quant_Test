@@ -1,0 +1,119 @@
+import pandas as pd
+import numpy as np
+import yfinance
+from mpl_finance import candlestick_ohlc
+import matplotlib.dates as mpl_dates
+import matplotlib.pyplot as plt
+from datetime import date
+import datetime
+import pandas as pd
+import matplotlib
+from pylab import title, figure, xlabel, ylabel, xticks, bar, legend, axis, savefig
+from fpdf import FPDF
+from tabulate import tabulate
+import dataframe_image as dfi
+
+plt.rcParams['figure.figsize'] = [12, 7]
+plt.rc('font', size=14)
+
+#set the Variables ticker and dates
+name = 'TTF=F'
+today = date.today()
+days = datetime.timedelta(days = 5)
+day = datetime.timedelta(days = 1)
+date = today - days
+today1 = today - day
+ticker = yfinance.Ticker(name)
+#df = ticker.history(interval="1d",start="2022-03-15",end="2022-03-17")
+# valid intervals: 1m,2m,5m,15m,30m,60m,90m,1h,1d,5d,1wk,1mo,3mo
+#pull the data
+df = ticker.history(interval="90m",start=date,end=today1)
+df['Date'] = pd.to_datetime(df.index)
+df['Date'] = df['Date'].apply(mpl_dates.date2num)
+df = df.loc[:,['Date', 'Open', 'High', 'Low', 'Close']]
+
+#check the data
+print(df)
+
+def isSupport(df,i):
+  support = df['Low'][i] < df['Low'][i-1]  and df['Low'][i] < df['Low'][i+1] and df['Low'][i+1] < df['Low'][i+2] and df['Low'][i-1] < df['Low'][i-2]
+  return support
+def isResistance(df,i):
+  resistance = df['High'][i] > df['High'][i-1]  and df['High'][i] > df['High'][i+1] and df['High'][i+1] > df['High'][i+2] and df['High'][i-1] > df['High'][i-2]
+  return resistance
+
+levels = []
+for i in range(2,df.shape[0]-2):
+  if isSupport(df,i):
+    levels.append((i,df['Low'][i]))
+  elif isResistance(df,i):
+    levels.append((i,df['High'][i]))
+
+def plot_all():
+  fig, ax = plt.subplots()
+  candlestick_ohlc(ax,df.values,width=0.08, \
+                   colorup='green', colordown='red', alpha=0.8)
+  date_format = mpl_dates.DateFormatter('%d %b %Y')
+  ax.xaxis.set_major_formatter(date_format)
+  fig.autofmt_xdate()
+  fig.tight_layout()
+  for level in levels:
+    plt.hlines(level[1],xmin=df['Date'][level[0]],\
+               xmax=max(df['Date']),colors='blue')
+  fig.show()
+  #fig.suptitle('90 Min Candlestick Chart of NG')
+  fig.suptitle("90 Min Candlestick Chart of TTF", y=1)
+plot_all()
+
+s =np.mean(df['High'] - df['Low'])
+
+def isFarFromLevel(l):
+   return np.sum([abs(l-x) < s  for x in levels]) == 0
+
+levels = []
+for i in range(2,df.shape[0]-2):
+  if isSupport(df,i):
+    l = df['Low'][i]
+    if isFarFromLevel(l):
+      levels.append((i,l))
+  elif isResistance(df,i):
+    l = df['High'][i]
+    if isFarFromLevel(l):
+      levels.append((i,l))
+
+
+plot_all()
+savefig('barchart.TTF.png')
+
+print(levels)
+print(tabulate(levels, headers=["Hours", "Price"]))
+
+
+#for x, y in levels:
+    #print (x, y)
+df = pd.DataFrame(levels)
+df.columns =['Level', 'Price']
+del df['Level']
+dfi.export(df, 'dataframe.TTF.png')
+#plt.show()
+
+pdf = FPDF()
+pdf.add_page()
+pdf.set_xy(0, 0)
+pdf.set_font('arial', 'B', 12)
+pdf.cell(60)
+pdf.cell(75, 10, "Technical Support and Resistance TTF", 0, 2, 'C')
+
+pdf.cell(90, 10, " ", 0, 2, 'C')
+pdf.cell(-50)
+pdf.image('barchart.TTF.png', x = None, y = None, w = 175, h = 125, type = '', link = '')
+pdf.cell(-10)
+pdf.image('dataframe.TTF.png', x = None, y = None, w = 0, h = 0, type = '', link = '')
+pdf.output('test.TTF.pdf', 'F')
+
+#links used:
+#https://towardsdatascience.com/detection-of-price-support-and-resistance-levels-in-python-baedc44c34c9
+#https://github.com/gianlucamalato/machinelearning/blob/master/Support_and_resistance.ipynb
+#https://www.geeksforgeeks.org/get-current-date-using-python/?msclkid=f97f0e60cee111ecb380cdfe61066e96
+#https://stackoverflow.com/questions/51864730/python-what-is-the-process-to-create-pdf-reports-with-charts-from-a-db
+#https://saralgyaan.com/posts/python-candlestick-chart-matplotlib-tutorial-chapter-11/
